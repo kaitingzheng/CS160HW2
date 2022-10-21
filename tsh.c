@@ -168,8 +168,21 @@ void eval(char *cmdline)
 {
     char *argv[MAXARGS];
 
-    parseline(cmdline, argv);
-    builtin_cmd(argv);
+    int state = 0;
+    if (parseline(cmdline, argv)) state = 2;
+    else state = 1;
+    int builtIn = builtin_cmd(argv);
+
+    if (!builtIn)
+    {
+        pid_t pid;
+        if (!(pid = fork())) {
+            execv("myprogram",argv);
+        }
+        else {
+            addjob(jobs, pid, state, cmdline);
+        }
+    }
     return;
 }
 
@@ -239,6 +252,18 @@ int builtin_cmd(char **argv)
     
     if(!strcmp(argv[0],"quit")){
         exit(0);
+        return 1;
+    }
+    if(!strcmp(argv[0],"fg")){
+        do_bgfg(argv);
+        return 1;
+    }
+    if(!strcmp(argv[0],"bg")){
+        do_bgfg(argv);
+        return 1;
+    }
+    if(!strcmp(argv[0],"jobs")){
+        listjobs(jobs);
         return 1;
     }
     return 0;     /* not a builtin command */
