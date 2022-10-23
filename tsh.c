@@ -237,7 +237,7 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
-    
+
     if(!strcmp(argv[0],"quit")){
         exit(0);
         return 1;
@@ -265,6 +265,56 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv) 
 {
+    struct job_t *job = NULL;
+    // move to foreground
+    if(!strcmp(argv[0],"fg")){
+        if(argv[1][0] == '%'){            
+            job = getjobjid(jobs, atoi(&argv[1][1]));
+            if(job == NULL){
+                printf("No such job\n");
+                return;
+            }
+        }
+        else if(argv[1][0] != '%'){
+            job = getjobpid(jobs, atoi(argv[1]));
+            if(job == NULL){
+                printf("No such job\n");
+                return;
+            }
+        }
+        else if(job == NULL){
+            printf("Invalid input");
+            return;
+        }
+        else{
+            kill(job->pid,SIGCONT);
+            job->state = FG;
+        }
+    }
+    else{
+        if(argv[1][0] == '%'){            
+            job = getjobjid(jobs, atoi(&argv[1][1]));
+            if(job == NULL){
+                printf("No such job\n");
+                return;
+            }
+        }
+        else if(argv[1][0] != '%'){
+            job = getjobpid(jobs, atoi(argv[1]));
+            if(job == NULL){
+                printf("No such job\n");
+                return;
+            }
+        }
+        else if(job == NULL){
+            printf("Invalid input");
+            return;
+        }
+        else{
+            kill(job->pid,SIGCONT);
+            job->state = FG;
+        }
+    }
     return;
 }
 
