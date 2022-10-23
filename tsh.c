@@ -170,6 +170,7 @@ void eval(char *cmdline)
 
     parseline(cmdline, argv);
     builtin_cmd(argv);
+
     return;
 }
 
@@ -241,7 +242,22 @@ int builtin_cmd(char **argv)
         exit(0);
         return 1;
     }
-    return 0;     /* not a builtin command */
+    else if(!strcmp(argv[0],"jobs")){
+        listjobs(jobs);
+        return 1;
+    }
+    else if(!strcmp(argv[0], "bg")){
+        do_bgfg(argv);
+        return 1;
+    }
+    else if(!strcmp(argv[0], "fg")){
+        do_bgfg(argv);
+        return 1;
+    }
+    else{
+        return 0;     /* not a builtin command */   
+    }
+    
 }
 
 /* 
