@@ -168,9 +168,21 @@ void eval(char *cmdline)
 {
     char *argv[MAXARGS];
 
-    parseline(cmdline, argv);
-    builtin_cmd(argv);
+    int state = 0;
+    if (parseline(cmdline, argv)) state = 2;
+    else state = 1;
+    int builtIn = builtin_cmd(argv);
 
+    if (!builtIn)
+    {
+        pid_t pid;
+        if (!(pid = fork())) {
+            execv("myprogram",argv);
+        }
+        else {
+            addjob(jobs, pid, state, cmdline);
+        }
+    }
     return;
 }
 
