@@ -167,19 +167,35 @@ int main(int argc, char **argv)
 void eval(char *cmdline) 
 {
     char *argv[MAXARGS];
+    sigset_t x;
 
     int state = 0;
-    if (parseline(cmdline, argv)) state = 2;
-    else state = 1;
+    if (parseline(cmdline, argv)){
+        state = BG;
+    } 
+    else{ 
+        state = FG;
+    }
+
+    // no argument
+    if(argv[0] == '\0'){
+        return;
+    }
     int builtIn = builtin_cmd(argv);
 
     if (!builtIn)
     {
-        pid_t pid;
-        if (!(pid = fork())) {
-            execv("myprogram",argv);
+        sigemptyset(&x);
+        sigaddset(&x,SIGCHLD);
+        sigprocmask(SIG_BLOCK, &x, NULL);
+        
+        pid_t pid = fork();
+        if (pid == 0) {
+            sigprocmask(SIG_UNBLOCK, &x, NULL);
+            execve("myprogram",argv, environ);
         }
         else {
+            sigprocmask(SIG_UNBLOCK, &x, NULL);
             addjob(jobs, pid, state, cmdline);
         }
     }
@@ -324,7 +340,7 @@ void do_bgfg(char **argv)
         }
         else{
             kill(job->pid,SIGCONT);
-            job->state = FG;
+            job->state = BG;
         }
     }
     return;
@@ -335,6 +351,11 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+    struct job_t *job;
+    job = getjobpid(jobs,pid);
+    while(job->state == FG){
+        sleep(1);
+    }
     return;
 }
 
