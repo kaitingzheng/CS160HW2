@@ -169,7 +169,7 @@ void eval(char *cmdline)
     char *argv[MAXARGS];
     sigset_t x;
 
-    int state = 0;
+    int state = UNDEF;
     if (parseline(cmdline, argv)){
         state = BG;
     } 
@@ -192,7 +192,7 @@ void eval(char *cmdline)
         pid_t pid = fork();
         if (pid == 0) {
             sigprocmask(SIG_UNBLOCK, &x, NULL);
-            execve("myprogram",argv, environ);
+            execve(argv[0],argv, environ);
         }
         else {
             sigprocmask(SIG_UNBLOCK, &x, NULL);
