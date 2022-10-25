@@ -178,7 +178,7 @@ void eval(char *cmdline)
     }
 
     // no argument
-    if(argv[0] == '\0'){
+    if(strcmp(argv[0], "") == 0) {
         return;
     }
     int builtIn = builtin_cmd(argv);
@@ -189,10 +189,11 @@ void eval(char *cmdline)
         sigaddset(&x,SIGCHLD);
         sigprocmask(SIG_BLOCK, &x, NULL);
         
+
         pid_t pid = fork();
         if (pid == 0) {
             sigprocmask(SIG_UNBLOCK, &x, NULL);
-            execve("myprogram",argv, environ);
+            execve(argv[0],argv, environ);
         }
         else {
             sigprocmask(SIG_UNBLOCK, &x, NULL);
@@ -314,11 +315,13 @@ void do_bgfg(char **argv)
             printf("Invalid input");
             return;
         }
-        else{
+        else {
             kill(job->pid,SIGCONT);
             job->state = FG;
+            waitfg(job->pid);
         }
     }
+
     else{
         if(argv[1][0] == '%'){            
             job = getjobjid(jobs, atoi(&argv[1][1]));
@@ -354,6 +357,7 @@ void waitfg(pid_t pid)
     struct job_t *job;
     job = getjobpid(jobs,pid);
     while(job->state == FG){
+        printf("actually waiting\n");
         sleep(1);
     }
     return;
