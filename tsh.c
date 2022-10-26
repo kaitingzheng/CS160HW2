@@ -344,6 +344,7 @@ void do_bgfg(char **argv)
             else{
                 kill(job->pid,SIGCONT);
                 job->state = BG;
+                printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
             }
             return;
         }
@@ -355,6 +356,7 @@ void do_bgfg(char **argv)
             else{
                 kill(job->pid,SIGCONT);
                 job->state = BG;
+                printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
             }
             return;
         }
@@ -372,8 +374,9 @@ void do_bgfg(char **argv)
 void waitfg(pid_t pid)
 {
     while(pid == fgpid(jobs)){
-        sleep(0);
+        sleep(1);
     } 
+    return;
 }
 
 /*****************
@@ -398,12 +401,14 @@ void sigchld_handler(int sig)
     }
     // exited because of signal
     else if(WIFSIGNALED(status)){
+        printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
         deletejob(jobs, pid);
     }
     // neither
     else{
         struct job_t *job = getjobpid(jobs,pid);
         job->state = ST;
+        printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WSTOPSIG(status));
     }
     return;
 }
