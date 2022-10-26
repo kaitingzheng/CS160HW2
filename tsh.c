@@ -191,18 +191,23 @@ void eval(char *cmdline)
         
         pid_t pid = fork();
         if (pid == 0) {
+            setpgid(0,0);
             sigprocmask(SIG_UNBLOCK, &x, NULL);
             execve(argv[0],argv, environ);
+            
         
         }
-        else {
+        if(state == BG){
             addjob(jobs, pid, state, cmdline);
             sigprocmask(SIG_UNBLOCK, &x, NULL);
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
+        }
+        else{
+            addjob(jobs, pid, state, cmdline);
+            sigprocmask(SIG_UNBLOCK, &x, NULL);
+            waitfg(pid);
         }
 
-        if(state == BG){
-            printf("[%d] (%d) %s\n", pid2jid(pid), pid, cmdline);
-        }
 
         
     }
@@ -358,12 +363,9 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-    struct job_t *job;
-    job = getjobpid(jobs,pid);
-    while(job->state == FG){
-        sleep(1);
-    }
-    return;
+    while(pid == fgpid(jobs)){
+        sleep(0);
+    } 
 }
 
 /*****************
@@ -379,6 +381,22 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
+    int status;
+    pid_t pid = waitpid(-1, &status, WNOHANG|WUNTRACED);
+    
+    //existed succesfully
+    if(WIFEXITED(status)){
+        deletejob(jobs, pid);
+    }
+    // exited because of signal
+    else if(WIFSIGNALED(status)){
+        deletejob(jobs, pid);
+    }
+    // neither
+    else{
+        struct job_t *job = getjobpid(jobs,pid);
+        job->state = ST;
+    }
     return;
 }
 
