@@ -169,7 +169,7 @@ void eval(char *cmdline)
     char *argv[MAXARGS];
     sigset_t x;
 
-    int state = 0;
+    int state = UNDEF;
     if (parseline(cmdline, argv)){
         state = BG;
     } 
@@ -194,11 +194,18 @@ void eval(char *cmdline)
         if (pid == 0) {
             sigprocmask(SIG_UNBLOCK, &x, NULL);
             execve(argv[0],argv, environ);
+        
         }
         else {
-            sigprocmask(SIG_UNBLOCK, &x, NULL);
             addjob(jobs, pid, state, cmdline);
+            sigprocmask(SIG_UNBLOCK, &x, NULL);
         }
+
+        if(state == BG){
+            printf("[%d] (%d) %s\n", pid2jid(pid), pid, cmdline);
+        }
+
+        
     }
     return;
 }
