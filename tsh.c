@@ -3,6 +3,7 @@
  * 
  * <Put your name and ID here>
  * Kaiting Zheng - kzhen027
+ * Gabriel Ruelas - gruel007
  */
 #include <stdio.h>
 #include <stdlib.h>
