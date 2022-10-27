@@ -192,18 +192,23 @@ void eval(char *cmdline)
 
         pid_t pid = fork();
         if (pid == 0) {
+            setpgid(0,0);
             sigprocmask(SIG_UNBLOCK, &x, NULL);
             execve(argv[0],argv, environ);
+            
         
         }
-        else {
+        if(state == BG){
             addjob(jobs, pid, state, cmdline);
             sigprocmask(SIG_UNBLOCK, &x, NULL);
+            printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);
+        }
+        else{
+            addjob(jobs, pid, state, cmdline);
+            sigprocmask(SIG_UNBLOCK, &x, NULL);
+            waitfg(pid);
         }
 
-        if(state == BG){
-            printf("[%d] (%d) %s\n", pid2jid(pid), pid, cmdline);
-        }
 
         
     }
@@ -308,24 +313,27 @@ void do_bgfg(char **argv)
             job = getjobjid(jobs, atoi(&argv[1][1]));
             if(job == NULL){
                 printf("No such job\n");
-                return;
             }
+            else{
+                kill(job->pid,SIGCONT);
+                job->state = FG;
+            }
+            return;
         }
         else if(argv[1][0] != '%'){
             job = getjobpid(jobs, atoi(argv[1]));
             if(job == NULL){
                 printf("No such job\n");
-                return;
             }
-        }
-        else if(job == NULL){
-            printf("Invalid input");
+            else{
+                kill(job->pid,SIGCONT);
+                job->state = FG;
+            }
             return;
         }
-        else {
-            kill(job->pid,SIGCONT);
-            job->state = FG;
-            waitfg(job->pid);
+        else{
+            printf("Invalid input");
+            return;
         }
     }
 
@@ -334,23 +342,29 @@ void do_bgfg(char **argv)
             job = getjobjid(jobs, atoi(&argv[1][1]));
             if(job == NULL){
                 printf("No such job\n");
-                return;
             }
+            else{
+                kill(job->pid,SIGCONT);
+                job->state = BG;
+                printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
+            }
+            return;
         }
         else if(argv[1][0] != '%'){
             job = getjobpid(jobs, atoi(argv[1]));
             if(job == NULL){
                 printf("No such job\n");
-                return;
             }
-        }
-        else if(job == NULL){
-            printf("Invalid input");
+            else{
+                kill(job->pid,SIGCONT);
+                job->state = BG;
+                printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
+            }
             return;
         }
         else{
-            kill(job->pid,SIGCONT);
-            job->state = BG;
+            printf("Invalid input");
+            return;
         }
     }
     return;
@@ -364,9 +378,8 @@ void waitfg(pid_t pid)
     struct job_t *job;
     job = getjobpid(jobs,pid);
     while(job->state == FG){
-        printf("actually waiting\n");
         sleep(1);
-    }
+    } 
     return;
 }
 
@@ -383,6 +396,24 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
+    int status;
+    pid_t pid = waitpid(-1, &status, WNOHANG|WUNTRACED);
+    
+    //existed succesfully
+    if(WIFEXITED(status)){
+        deletejob(jobs, pid);
+    }
+    // exited because of signal
+    else if(WIFSIGNALED(status)){
+        printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
+        deletejob(jobs, pid);
+    }
+    // neither
+    else{
+        struct job_t *job = getjobpid(jobs,pid);
+        job->state = ST;
+        printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WSTOPSIG(status));
+    }
     return;
 }
 
